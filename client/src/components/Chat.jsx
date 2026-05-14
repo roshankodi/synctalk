@@ -23,11 +23,11 @@ function Chat() {
   const messagesEndRef = useRef(null);
 
   // ===============================
-  // Socket Listeners
+  // SOCKET LISTENERS
   // ===============================
 
   useEffect(() => {
-    // New Messages
+    // Live Messages
     socket.on("message", (message) => {
       setMessages((prev) => [
         ...prev,
@@ -43,20 +43,26 @@ function Chat() {
       }
     );
 
-    // Active Room Users
+    // Active Users
     socket.on("room_users", (users) => {
       setRoomUsers(users);
+    });
+
+    // Room Cleared
+    socket.on("room_cleared", () => {
+      setMessages([]);
     });
 
     return () => {
       socket.off("message");
       socket.off("previous_messages");
       socket.off("room_users");
+      socket.off("room_cleared");
     };
   }, []);
 
   // ===============================
-  // Auto Scroll
+  // AUTO SCROLL
   // ===============================
 
   useEffect(() => {
@@ -70,7 +76,7 @@ function Chat() {
   };
 
   // ===============================
-  // Join Room
+  // JOIN ROOM
   // ===============================
 
   const joinRoom = () => {
@@ -82,7 +88,6 @@ function Chat() {
 
     setJoined(true);
 
-    // Join Room Properly
     socket.emit("join_room", {
       username,
       room,
@@ -90,7 +95,7 @@ function Chat() {
   };
 
   // ===============================
-  // Send Message
+  // SEND MESSAGE
   // ===============================
 
   const sendMessage = () => {
@@ -107,6 +112,20 @@ function Chat() {
     socket.emit("message", messageData);
 
     setMessageInput("");
+  };
+
+  // ===============================
+  // CLEAR CHAT
+  // ===============================
+
+  const clearChat = () => {
+    const confirmClear = window.confirm(
+      "Delete all messages in this room?"
+    );
+
+    if (!confirmClear) return;
+
+    socket.emit("clear_room", room);
   };
 
   // ===============================
@@ -206,31 +225,32 @@ function Chat() {
 
   return (
     <div
-      className={`flex justify-center items-center min-h-screen px-4 ${
+      className={`flex justify-center items-center min-h-screen px-2 lg:px-6 ${
         darkMode
           ? "bg-[#020817]"
           : "bg-gradient-to-br from-slate-100 to-slate-200"
       }`}
     >
       <div
-        className={`w-full max-w-6xl rounded-3xl shadow-2xl overflow-hidden ${
+        className={`w-full max-w-[1700px] rounded-3xl shadow-2xl overflow-hidden ${
           darkMode
             ? "bg-[#111827] text-white"
             : "bg-white"
         }`}
       >
-        <div className="flex h-[750px]">
+        <div className="flex h-[820px]">
           {/* ===============================
               SIDEBAR
           =============================== */}
 
           <div
-            className={`w-[280px] border-r p-5 ${
+            className={`w-[300px] border-r p-5 ${
               darkMode
                 ? "bg-[#0f172a] border-gray-700"
                 : "bg-gray-100 border-gray-200"
             }`}
           >
+            {/* HEADER */}
             <div className="flex items-center justify-between mb-6">
               <h1 className="text-3xl font-bold">
                 SyncTalk
@@ -250,6 +270,7 @@ function Chat() {
               </button>
             </div>
 
+            {/* ROOM */}
             <div className="mb-6">
               <p
                 className={`text-sm ${
@@ -261,12 +282,20 @@ function Chat() {
                 Room
               </p>
 
-              <h2 className="text-xl font-semibold mt-1">
+              <h2 className="text-2xl font-semibold mt-1">
                 #{room}
               </h2>
             </div>
 
-            {/* Users */}
+            {/* CLEAR CHAT BUTTON */}
+            <button
+              onClick={clearChat}
+              className="w-full mb-6 bg-red-500 hover:bg-red-600 text-white py-3 rounded-2xl font-semibold transition"
+            >
+              Clear Chat
+            </button>
+
+            {/* USERS */}
             <div>
               <p
                 className={`text-sm mb-3 ${
@@ -283,7 +312,7 @@ function Chat() {
                 {roomUsers.map((user, index) => (
                   <div
                     key={index}
-                    className={`px-3 py-2 rounded-xl ${
+                    className={`px-4 py-3 rounded-xl ${
                       darkMode
                         ? "bg-gray-800"
                         : "bg-white"
@@ -301,7 +330,7 @@ function Chat() {
           =============================== */}
 
           <div className="flex flex-col flex-1">
-            {/* Messages */}
+            {/* MESSAGES */}
             <div
               className={`flex-1 overflow-y-auto p-6 space-y-4 ${
                 darkMode
@@ -366,7 +395,7 @@ function Chat() {
               <div ref={messagesEndRef} />
             </div>
 
-            {/* Input */}
+            {/* INPUT */}
             <div
               className={`p-5 border-t ${
                 darkMode
@@ -374,7 +403,7 @@ function Chat() {
                   : "border-gray-200 bg-white"
               }`}
             >
-              <div className="flex items-center gap-4">
+              <div className="flex items-center gap-4 w-full">
                 <input
                   type="text"
                   placeholder="Message your team..."
@@ -388,7 +417,7 @@ function Chat() {
                     e.key === "Enter" &&
                     sendMessage()
                   }
-                  className={`w-full px-6 py-4 rounded-2xl outline-none border text-lg ${
+                  className={`flex-1 px-6 py-4 rounded-2xl outline-none border text-lg ${
                     darkMode
                       ? "bg-gray-700 border-gray-600 text-white"
                       : "border-gray-300"
@@ -397,7 +426,7 @@ function Chat() {
 
                 <button
                   onClick={sendMessage}
-                  className="bg-indigo-500 hover:bg-indigo-600 text-white px-8 py-4 rounded-2xl font-semibold transition whitespace-nowrap"
+                  className="bg-indigo-500 hover:bg-indigo-600 text-white px-10 py-4 rounded-2xl font-semibold transition whitespace-nowrap"
                 >
                   Send
                 </button>
