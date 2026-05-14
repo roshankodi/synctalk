@@ -12,7 +12,9 @@
   "author": "Roshan Kodi",
   "license": "ISC",
   "dependencies": {
+    "dotenv": "^17.4.2",
     "express": "^4.18.2",
+    "mongoose": "^9.6.2",
     "socket.io": "^4.7.2"
   }
 }
