@@ -11,6 +11,10 @@ const app = express();
 
 const server = http.createServer(app);
 
+// ===============================
+// SOCKET.IO CONFIG
+// ===============================
+
 const io = new Server(server, {
   cors: {
     origin: "*",
@@ -19,13 +23,13 @@ const io = new Server(server, {
 });
 
 // ===============================
-// Active Rooms Storage
+// ACTIVE ROOMS STORAGE
 // ===============================
 
 const activeRooms = {};
 
 // ===============================
-// MongoDB Connection
+// MONGODB CONNECTION
 // ===============================
 
 mongoose
@@ -38,35 +42,47 @@ mongoose
   });
 
 // ===============================
-// Routes
+// ROUTES
 // ===============================
 
-// Health Route
+// Health Check
 app.get("/", (req, res) => {
   res.send("✅ SyncTalk backend is running");
 });
 
-// Get Active Rooms
+// Get All Active Rooms
 app.get("/rooms", (req, res) => {
-  res.json(Object.keys(activeRooms));
+  const rooms = Object.keys(activeRooms).map(
+    (roomName) => ({
+      room: roomName,
+      users: activeRooms[roomName],
+      totalUsers:
+        activeRooms[roomName].length,
+    })
+  );
+
+  res.json(rooms);
 });
 
 // ===============================
-// Socket.IO Connection
+// SOCKET CONNECTION
 // ===============================
 
 io.on("connection", (socket) => {
-  console.log("🟢 User connected:", socket.id);
+  console.log(
+    "🟢 User connected:",
+    socket.id
+  );
 
   // ===============================
-  // Join Room
+  // JOIN ROOM
   // ===============================
 
   socket.on(
     "join_room",
     async ({ username, room }) => {
       try {
-        // Save user info to socket
+        // Save user data
         socket.username = username;
         socket.room = room;
 
@@ -77,12 +93,21 @@ io.on("connection", (socket) => {
           `👤 ${username} joined room: ${room}`
         );
 
-        // Add room to active rooms
+        // Create room if not exists
         if (!activeRooms[room]) {
           activeRooms[room] = [];
         }
 
-        activeRooms[room].push(username);
+        // Prevent duplicate usernames
+        if (
+          !activeRooms[room].includes(
+            username
+          )
+        ) {
+          activeRooms[room].push(
+            username
+          );
+        }
 
         // Load previous messages
         const previousMessages =
@@ -97,18 +122,32 @@ io.on("connection", (socket) => {
           previousMessages
         );
 
-        // Notify room
-        io.to(room).emit("message", {
-          text: `${username} joined the room`,
-          username: "System",
-          room,
-          timestamp: new Date(),
-        });
+        // Send system join message
+        const joinMessage =
+          new Message({
+            text: `${username} joined the room`,
+            username: "System",
+            room,
+            timestamp: new Date(),
+          });
 
-        // Update users list
+        await joinMessage.save();
+
+        io.to(room).emit(
+          "message",
+          joinMessage
+        );
+
+        // Update active users
         io.to(room).emit(
           "room_users",
           activeRooms[room]
+        );
+
+        // Update active rooms
+        io.emit(
+          "active_rooms",
+          Object.keys(activeRooms)
         );
       } catch (error) {
         console.log(
@@ -120,26 +159,26 @@ io.on("connection", (socket) => {
   );
 
   // ===============================
-  // Send Message
+  // SEND MESSAGE
   // ===============================
 
   socket.on(
     "message",
     async (messageData) => {
       try {
-        // Save message to MongoDB
-        const newMessage = new Message({
-          text: messageData.text,
-          username: messageData.username,
-          room: messageData.room,
-          timestamp:
-            messageData.timestamp ||
-            new Date(),
-        });
+        const newMessage =
+          new Message({
+            text: messageData.text,
+            username:
+              messageData.username,
+            room: messageData.room,
+            timestamp:
+              messageData.timestamp ||
+              new Date(),
+          });
 
         await newMessage.save();
 
-        // Emit message to room
         io.to(messageData.room).emit(
           "message",
           newMessage
@@ -154,12 +193,50 @@ io.on("connection", (socket) => {
   );
 
   // ===============================
-  // Disconnect
+  // CLEAR ROOM CHAT
   // ===============================
 
-  socket.on("disconnect", () => {
+  socket.on(
+    "clear_room",
+    async (room) => {
+      try {
+        await Message.deleteMany({
+          room,
+        });
+
+        // Notify frontend
+        io.to(room).emit(
+          "room_cleared"
+        );
+
+        // Send system message
+        io.to(room).emit("message", {
+          text: "Chat history cleared",
+          username: "System",
+          room,
+          timestamp: new Date(),
+        });
+
+        console.log(
+          `🧹 Cleared messages for room: ${room}`
+        );
+      } catch (error) {
+        console.log(
+          "❌ Clear room error:",
+          error
+        );
+      }
+    }
+  );
+
+  // ===============================
+  // DISCONNECT
+  // ===============================
+
+  socket.on("disconnect", async () => {
     try {
-      const username = socket.username;
+      const username =
+        socket.username;
       const room = socket.room;
 
       if (username && room) {
@@ -167,33 +244,50 @@ io.on("connection", (socket) => {
           `🔴 ${username} left room: ${room}`
         );
 
-        // Remove user from active rooms
+        // Remove user
         if (activeRooms[room]) {
           activeRooms[room] =
             activeRooms[room].filter(
-              (user) => user !== username
+              (user) =>
+                user !== username
             );
 
           // Remove empty room
           if (
-            activeRooms[room].length === 0
+            activeRooms[room].length ===
+            0
           ) {
             delete activeRooms[room];
           }
         }
 
+        // Save leave message
+        const leaveMessage =
+          new Message({
+            text: `${username} left the room`,
+            username: "System",
+            room,
+            timestamp: new Date(),
+          });
+
+        await leaveMessage.save();
+
         // Notify room
-        io.to(room).emit("message", {
-          text: `${username} left the room`,
-          username: "System",
-          room,
-          timestamp: new Date(),
-        });
+        io.to(room).emit(
+          "message",
+          leaveMessage
+        );
 
         // Update users list
         io.to(room).emit(
           "room_users",
           activeRooms[room] || []
+        );
+
+        // Update active rooms
+        io.emit(
+          "active_rooms",
+          Object.keys(activeRooms)
         );
       }
 
@@ -211,7 +305,7 @@ io.on("connection", (socket) => {
 });
 
 // ===============================
-// Start Server
+// START SERVER
 // ===============================
 
 const PORT = process.env.PORT || 5000;
