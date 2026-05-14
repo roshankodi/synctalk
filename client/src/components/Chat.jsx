@@ -9,10 +9,15 @@ function Chat() {
   const [messages, setMessages] = useState([]);
   const [messageInput, setMessageInput] =
     useState("");
+
   const [username, setUsername] =
     useState("");
+
   const [room, setRoom] = useState("");
-  const [joined, setJoined] = useState(false);
+
+  const [joined, setJoined] =
+    useState(false);
+
   const [darkMode, setDarkMode] =
     useState(true);
 
@@ -53,11 +58,22 @@ function Chat() {
       setMessages([]);
     });
 
+    // Room Deleted
+    socket.on("room_deleted", () => {
+      alert("Room deleted successfully");
+
+      setMessages([]);
+      setJoined(false);
+      setRoom("");
+      setRoomUsers([]);
+    });
+
     return () => {
       socket.off("message");
       socket.off("previous_messages");
       socket.off("room_users");
       socket.off("room_cleared");
+      socket.off("room_deleted");
     };
   }, []);
 
@@ -120,12 +136,27 @@ function Chat() {
 
   const clearChat = () => {
     const confirmClear = window.confirm(
-      "Delete all messages in this room?"
+      "Clear all messages in this room?"
     );
 
     if (!confirmClear) return;
 
     socket.emit("clear_room", room);
+  };
+
+  // ===============================
+  // DELETE ROOM
+  // ===============================
+
+  const deleteRoom = () => {
+    const confirmDelete =
+      window.confirm(
+        "Delete this room permanently?"
+      );
+
+    if (!confirmDelete) return;
+
+    socket.emit("delete_room", room);
   };
 
   // ===============================
@@ -148,7 +179,7 @@ function Chat() {
               : "bg-white"
           }`}
         >
-          {/* Header */}
+          {/* HEADER */}
           <div className="flex items-center justify-center gap-3 mb-2">
             <h1 className="text-4xl font-bold">
               SyncTalk
@@ -225,26 +256,24 @@ function Chat() {
 
   return (
     <div
-      className={`flex justify-center items-center min-h-screen px-2 lg:px-6 ${
+      className={`flex justify-center items-center min-h-screen px-1 lg:px-3 ${
         darkMode
           ? "bg-[#020817]"
           : "bg-gradient-to-br from-slate-100 to-slate-200"
       }`}
     >
       <div
-        className={`w-full max-w-[1700px] rounded-3xl shadow-2xl overflow-hidden ${
+        className={`w-full max-w-[1900px] rounded-3xl shadow-2xl overflow-hidden ${
           darkMode
             ? "bg-[#111827] text-white"
             : "bg-white"
         }`}
       >
-        <div className="flex h-[820px]">
-          {/* ===============================
-              SIDEBAR
-          =============================== */}
+        <div className="flex h-[850px]">
+          {/* SIDEBAR */}
 
           <div
-            className={`w-[300px] border-r p-5 ${
+            className={`w-[320px] border-r p-5 ${
               darkMode
                 ? "bg-[#0f172a] border-gray-700"
                 : "bg-gray-100 border-gray-200"
@@ -287,12 +316,20 @@ function Chat() {
               </h2>
             </div>
 
-            {/* CLEAR CHAT BUTTON */}
+            {/* CLEAR CHAT */}
             <button
               onClick={clearChat}
-              className="w-full mb-6 bg-red-500 hover:bg-red-600 text-white py-3 rounded-2xl font-semibold transition"
+              className="w-full mb-3 bg-slate-600 hover:bg-slate-700 text-white py-3 rounded-2xl font-semibold transition"
             >
               Clear Chat
+            </button>
+
+            {/* DELETE ROOM */}
+            <button
+              onClick={deleteRoom}
+              className="w-full mb-6 bg-stone-600 hover:bg-stone-700 text-white py-3 rounded-2xl font-semibold transition"
+            >
+              Delete Room
             </button>
 
             {/* USERS */}
@@ -325,9 +362,7 @@ function Chat() {
             </div>
           </div>
 
-          {/* ===============================
-              CHAT AREA
-          =============================== */}
+          {/* CHAT AREA */}
 
           <div className="flex flex-col flex-1">
             {/* MESSAGES */}
