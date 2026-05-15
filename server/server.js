@@ -51,7 +51,7 @@ app.get("/", (req, res) => {
 });
 
 // ===============================
-// GET ALL ROOMS EVER CREATED
+// GET ALL ROOMS
 // ===============================
 
 app.get("/rooms", async (req, res) => {
@@ -127,7 +127,7 @@ io.on("connection", (socket) => {
           );
         }
 
-        // PREVIOUS MESSAGES
+        // LOAD PREVIOUS MESSAGES
 
         const previousMessages =
           await Message.find({
@@ -208,6 +208,58 @@ io.on("connection", (socket) => {
   );
 
   // ===============================
+  // TYPING
+  // ===============================
+
+  socket.on(
+    "typing",
+    ({ room, username }) => {
+      socket.to(room).emit(
+        "typing",
+        username
+      );
+    }
+  );
+
+  socket.on("stop_typing", (room) => {
+    socket.to(room).emit(
+      "stop_typing"
+    );
+  });
+
+  // ===============================
+  // DELETE MESSAGE EVERYONE
+  // ===============================
+
+  socket.on(
+    "delete_message_everyone",
+    async ({ messageId, room }) => {
+      try {
+        await Message.findByIdAndUpdate(
+          messageId,
+          {
+            text:
+              "This message was deleted",
+            deleted: true,
+          }
+        );
+
+        io.to(room).emit(
+          "message_deleted_everyone",
+          {
+            messageId,
+          }
+        );
+      } catch (error) {
+        console.log(
+          "❌ Delete message error:",
+          error
+        );
+      }
+    }
+  );
+
+  // ===============================
   // CLEAR CHAT
   // ===============================
 
@@ -243,25 +295,20 @@ io.on("connection", (socket) => {
     "delete_room",
     async (room) => {
       try {
-        // DELETE MESSAGES
         await Message.deleteMany({
           room,
         });
 
-        // DELETE ROOM
         await Room.deleteOne({
           roomName: room,
         });
 
-        // REMOVE ACTIVE USERS
         delete activeRooms[room];
 
-        // NOTIFY USERS
         io.to(room).emit(
           "room_deleted"
         );
 
-        // FORCE USERS OUT
         const sockets =
           await io.in(room).fetchSockets();
 
@@ -308,8 +355,6 @@ io.on("connection", (socket) => {
             "room_users",
             activeRooms[room]
           );
-
-          // LEAVE MESSAGE
 
           const leaveMessage =
             new Message({
