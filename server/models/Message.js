@@ -1,77 +1,30 @@
 const mongoose = require("mongoose");
 
-const MessageSchema = new mongoose.Schema(
-  {
-    // ===============================
-    // MESSAGE TEXT
-    // ===============================
-
-    text: {
-      type: String,
-      required: true,
-      trim: true,
-    },
-
-    // ===============================
-    // USERNAME
-    // ===============================
-
-    username: {
-      type: String,
-      required: true,
-      trim: true,
-    },
-
-    // ===============================
-    // ROOM
-    // ===============================
-
-    room: {
-      type: String,
-      required: true,
-      trim: true,
-    },
-
-    // ===============================
-    // TIMESTAMP
-    // ===============================
-
-    timestamp: {
-      type: Date,
-      default: Date.now,
-    },
-
-    // ===============================
-    // DELETE SUPPORT
-    // ===============================
-
-    deleted: {
-      type: Boolean,
-      default: false,
-    },
-
-    // ===============================
-    // REPLY SUPPORT
-    // ===============================
-
-    replyTo: {
-      text: {
-        type: String,
-        default: "",
-      },
-
-      username: {
-        type: String,
-        default: "",
-      },
-    },
+const MessageSchema = new mongoose.Schema({
+  text: {
+    type: String,
+    required: true,
   },
-  {
-    versionKey: false,
-  }
-);
+
+  username: {
+    type: String,
+    required: true,
+  },
+
+  room: {
+    type: String,
+    required: true,
+  },
+
+  timestamp: {
+    type: Date,
+    default: Date.now,
+  },
+});
 
 module.exports = mongoose.model(
   "Message",
   MessageSchema
 );
+
+the above is my message.js

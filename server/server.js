@@ -13,7 +13,7 @@ const app = express();
 const server = http.createServer(app);
 
 // ===============================
-// SOCKET.IO
+// SOCKET.IO CONFIG
 // ===============================
 
 const io = new Server(server, {
@@ -24,19 +24,13 @@ const io = new Server(server, {
 });
 
 // ===============================
-// ACTIVE USERS
+// ACTIVE USERS STORAGE
 // ===============================
 
 const activeRooms = {};
 
 // ===============================
-// TYPING USERS
-// ===============================
-
-const typingUsers = {};
-
-// ===============================
-// MONGODB
+// MONGODB CONNECTION
 // ===============================
 
 mongoose
@@ -53,11 +47,11 @@ mongoose
 // ===============================
 
 app.get("/", (req, res) => {
-  res.send("✅ SyncTalk backend running");
+  res.send("✅ SyncTalk backend is running");
 });
 
 // ===============================
-// GET ROOMS
+// GET ALL ROOMS EVER CREATED
 // ===============================
 
 app.get("/rooms", async (req, res) => {
@@ -68,7 +62,7 @@ app.get("/rooms", async (req, res) => {
 
     res.json(rooms);
   } catch (error) {
-    console.log("❌ Rooms Error:", error);
+    console.log("❌ Rooms fetch error:", error);
 
     res.status(500).json({
       error: "Failed to fetch rooms",
@@ -81,7 +75,7 @@ app.get("/rooms", async (req, res) => {
 // ===============================
 
 io.on("connection", (socket) => {
-  console.log("🟢 Connected:", socket.id);
+  console.log("🟢 User connected:", socket.id);
 
   // ===============================
   // JOIN ROOM
@@ -97,12 +91,10 @@ io.on("connection", (socket) => {
         socket.join(room);
 
         console.log(
-          `👤 ${username} joined ${room}`
+          `👤 ${username} joined room: ${room}`
         );
 
-        // ===============================
         // CREATE ROOM IF NOT EXISTS
-        // ===============================
 
         const existingRoom =
           await Room.findOne({
@@ -113,11 +105,13 @@ io.on("connection", (socket) => {
           await Room.create({
             roomName: room,
           });
+
+          console.log(
+            `🏠 Room created: ${room}`
+          );
         }
 
-        // ===============================
         // ACTIVE USERS
-        // ===============================
 
         if (!activeRooms[room]) {
           activeRooms[room] = [];
@@ -133,14 +127,7 @@ io.on("connection", (socket) => {
           );
         }
 
-        io.to(room).emit(
-          "room_users",
-          activeRooms[room]
-        );
-
-        // ===============================
-        // LOAD OLD MESSAGES
-        // ===============================
+        // PREVIOUS MESSAGES
 
         const previousMessages =
           await Message.find({
@@ -154,9 +141,7 @@ io.on("connection", (socket) => {
           previousMessages
         );
 
-        // ===============================
         // JOIN MESSAGE
-        // ===============================
 
         const joinMessage =
           new Message({
@@ -172,9 +157,16 @@ io.on("connection", (socket) => {
           "message",
           joinMessage
         );
+
+        // UPDATE USERS
+
+        io.to(room).emit(
+          "room_users",
+          activeRooms[room]
+        );
       } catch (error) {
         console.log(
-          "❌ Join Room Error:",
+          "❌ Join room error:",
           error
         );
       }
@@ -189,32 +181,15 @@ io.on("connection", (socket) => {
     "message",
     async (messageData) => {
       try {
-        if (
-          !messageData.text ||
-          !messageData.text.trim()
-        ) {
-          return;
-        }
-
         const newMessage =
           new Message({
-            text:
-              messageData.text.trim(),
-
+            text: messageData.text,
             username:
               messageData.username,
-
             room: messageData.room,
-
             timestamp:
               messageData.timestamp ||
               new Date(),
-
-            replyTo:
-              messageData.replyTo ||
-              null,
-
-            deleted: false,
           });
 
         await newMessage.save();
@@ -223,27 +198,9 @@ io.on("connection", (socket) => {
           "message",
           newMessage
         );
-
-        // ===============================
-        // STOP TYPING
-        // ===============================
-
-        if (
-          typingUsers[
-            messageData.room
-          ]
-        ) {
-          delete typingUsers[
-            messageData.room
-          ][messageData.username];
-        }
-
-        io.to(messageData.room).emit(
-          "stop_typing"
-        );
       } catch (error) {
         console.log(
-          "❌ Message Error:",
+          "❌ Message save error:",
           error
         );
       }
@@ -251,101 +208,7 @@ io.on("connection", (socket) => {
   );
 
   // ===============================
-  // TYPING
-  // ===============================
-
-  socket.on(
-    "typing",
-    ({ room, username }) => {
-      if (!typingUsers[room]) {
-        typingUsers[room] = {};
-      }
-
-      // already typing
-      if (
-        typingUsers[room][username]
-      ) {
-        return;
-      }
-
-      typingUsers[room][username] =
-        true;
-
-      socket.to(room).emit(
-        "typing",
-        username
-      );
-    }
-  );
-
-  // ===============================
-  // STOP TYPING
-  // ===============================
-
-  socket.on("stop_typing", (room) => {
-    if (
-      typingUsers[room] &&
-      socket.username
-    ) {
-      delete typingUsers[room][
-        socket.username
-      ];
-    }
-
-    socket.to(room).emit(
-      "stop_typing"
-    );
-  });
-
-  // ===============================
-  // DELETE MESSAGE FOR EVERYONE
-  // ===============================
-
-  socket.on(
-    "delete_message_everyone",
-    async ({ messageId, room }) => {
-      try {
-        const message =
-          await Message.findById(
-            messageId
-          );
-
-        if (!message) {
-          return;
-        }
-
-        // sender only
-        if (
-          message.username !==
-          socket.username
-        ) {
-          return;
-        }
-
-        message.text =
-          "This message was deleted";
-
-        message.deleted = true;
-
-        await message.save();
-
-        io.to(room).emit(
-          "message_deleted_everyone",
-          {
-            messageId,
-          }
-        );
-      } catch (error) {
-        console.log(
-          "❌ Delete Message Error:",
-          error
-        );
-      }
-    }
-  );
-
-  // ===============================
-  // CLEAR ROOM
+  // CLEAR CHAT
   // ===============================
 
   socket.on(
@@ -361,11 +224,11 @@ io.on("connection", (socket) => {
         );
 
         console.log(
-          `🧹 Cleared ${room}`
+          `🧹 Cleared chat for room: ${room}`
         );
       } catch (error) {
         console.log(
-          "❌ Clear Room Error:",
+          "❌ Clear room error:",
           error
         );
       }
@@ -380,22 +243,25 @@ io.on("connection", (socket) => {
     "delete_room",
     async (room) => {
       try {
+        // DELETE MESSAGES
         await Message.deleteMany({
           room,
         });
 
+        // DELETE ROOM
         await Room.deleteOne({
           roomName: room,
         });
 
+        // REMOVE ACTIVE USERS
         delete activeRooms[room];
 
-        delete typingUsers[room];
-
+        // NOTIFY USERS
         io.to(room).emit(
           "room_deleted"
         );
 
+        // FORCE USERS OUT
         const sockets =
           await io.in(room).fetchSockets();
 
@@ -404,11 +270,11 @@ io.on("connection", (socket) => {
         });
 
         console.log(
-          `🗑️ Deleted ${room}`
+          `🗑️ Room deleted: ${room}`
         );
       } catch (error) {
         console.log(
-          "❌ Delete Room Error:",
+          "❌ Delete room error:",
           error
         );
       }
@@ -428,12 +294,8 @@ io.on("connection", (socket) => {
 
       if (username && room) {
         console.log(
-          `🔴 ${username} left ${room}`
+          `🔴 ${username} left room: ${room}`
         );
-
-        // ===============================
-        // REMOVE USER
-        // ===============================
 
         if (activeRooms[room]) {
           activeRooms[room] =
@@ -447,60 +309,32 @@ io.on("connection", (socket) => {
             activeRooms[room]
           );
 
-          // cleanup empty room
-          if (
-            activeRooms[room]
-              .length === 0
-          ) {
-            delete activeRooms[
-              room
-            ];
-          }
+          // LEAVE MESSAGE
+
+          const leaveMessage =
+            new Message({
+              text: `${username} left the room`,
+              username: "System",
+              room,
+              timestamp: new Date(),
+            });
+
+          await leaveMessage.save();
+
+          io.to(room).emit(
+            "message",
+            leaveMessage
+          );
         }
-
-        // ===============================
-        // REMOVE TYPING
-        // ===============================
-
-        if (
-          typingUsers[room]
-        ) {
-          delete typingUsers[room][
-            username
-          ];
-        }
-
-        socket
-          .to(room)
-          .emit("stop_typing");
-
-        // ===============================
-        // LEAVE MESSAGE
-        // ===============================
-
-        const leaveMessage =
-          new Message({
-            text: `${username} left the room`,
-            username: "System",
-            room,
-            timestamp: new Date(),
-          });
-
-        await leaveMessage.save();
-
-        io.to(room).emit(
-          "message",
-          leaveMessage
-        );
       }
 
       console.log(
-        "🔌 Disconnected:",
+        "🔌 User disconnected:",
         socket.id
       );
     } catch (error) {
       console.log(
-        "❌ Disconnect Error:",
+        "❌ Disconnect error:",
         error
       );
     }
@@ -515,6 +349,6 @@ const PORT = process.env.PORT || 5000;
 
 server.listen(PORT, () => {
   console.log(
-    `🚀 Server running on ${PORT}`
+    `🚀 Server running on port ${PORT}`
   );
 });
