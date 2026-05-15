@@ -44,13 +44,13 @@ function Chat() {
             text: "text-slate-100",
             muted: "text-slate-400",
             input:
-              "bg-slate-800/85 border-slate-700 text-slate-100 placeholder:text-slate-400",
+              "bg-gray-700 border border-gray-600 text-slate-100 placeholder:text-slate-400",
             bubbleMine: "bg-indigo-500 text-white",
             bubbleOther: "bg-slate-800 text-slate-100",
             bubbleSystem: "bg-emerald-600 text-white",
             chip: "bg-slate-800 text-slate-200",
             subtleButton: "bg-slate-800 hover:bg-slate-700 text-slate-100",
-            dangerButton: "bg-rose-600 hover:bg-rose-500 text-white",
+            dangerButton: "bg-stone-600 hover:bg-stone-700 text-white",
             pageBg: "bg-slate-950",
             cardShadow: "shadow-2xl shadow-black/30",
           }
@@ -62,13 +62,13 @@ function Chat() {
             text: "text-slate-900",
             muted: "text-slate-500",
             input:
-              "bg-white border-slate-300 text-slate-900 placeholder:text-slate-500",
+              "bg-gray-700 border border-gray-600 text-slate-100 placeholder:text-slate-400",
             bubbleMine: "bg-indigo-600 text-white",
             bubbleOther: "bg-white text-slate-900",
             bubbleSystem: "bg-emerald-500 text-white",
             chip: "bg-slate-100 text-slate-700",
             subtleButton: "bg-slate-200 hover:bg-slate-300 text-slate-900",
-            dangerButton: "bg-rose-500 hover:bg-rose-600 text-white",
+            dangerButton: "bg-stone-600 hover:bg-stone-700 text-white",
             pageBg: "bg-slate-100",
             cardShadow: "shadow-2xl shadow-slate-400/20",
           },
@@ -116,9 +116,7 @@ function Chat() {
     const el = messagesContainerRef.current;
     if (!el) return;
 
-    const distanceFromBottom =
-      el.scrollHeight - el.scrollTop - el.clientHeight;
-
+    const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
     setIsNearBottom(distanceFromBottom < 120);
   };
 
@@ -627,9 +625,7 @@ function Chat() {
           </div>
         </section>
 
-        <div
-          className={`border-t px-3 py-3 sm:px-6 ${themeStyles.panel} ${themeStyles.border}`}
-        >
+        <div className={`border-t px-3 py-3 sm:px-6 ${themeStyles.panel} ${themeStyles.border}`}>
           <form
             className="flex items-end gap-3"
             onSubmit={(e) => {
@@ -649,7 +645,7 @@ function Chat() {
                   sendMessage();
                 }
               }}
-              className={`min-w-0 flex-1 rounded-2xl border px-4 py-4 outline-none transition ${themeStyles.input}`}
+              className={`min-w-0 flex-1 rounded-2xl px-4 py-4 outline-none transition ${themeStyles.input}`}
             />
 
             <button
