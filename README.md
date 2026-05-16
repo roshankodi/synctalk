@@ -1,7 +1,8 @@
 # SyncTalk 🚀
 
-A modern real-time chat application built with React, Node.js, Socket.IO, and MongoDB.  
-SyncTalk enables users to join chat rooms, communicate instantly, and experience seamless real-time messaging with a clean modern UI.
+A modern real-time chat application built with **React, Node.js, Socket.IO, and MongoDB** that enables instant communication through room-based messaging.
+
+SyncTalk provides a fast and responsive real-time chat experience with persistent message storage, modern UI design, and scalable client-server architecture.
 
 ---
 
@@ -12,12 +13,6 @@ https://synctalk.vercel.app/
 
 ### Backend
 https://synctalk-backend-w7lj.onrender.com
-
----
-
-## 📂 GitHub Repository
-
-https://github.com/roshankodi/synctalk
 
 ---
 
@@ -56,15 +51,41 @@ https://github.com/roshankodi/synctalk
 
 ---
 
-# 📸 Screenshots
+## 📸 Screenshots
 
-## Join Room Screen
+### Join Room Screen
 
-_Add screenshot here_
+![Join Room](./screenshots/join-room.png)
 
-## Chat Interface
+---
 
-_Add screenshot here_
+### Desktop Chat Interface
+
+![Desktop Chat](./screenshots/desktop.png)
+
+---
+
+### Toggle Mmode Interface
+
+![Toggle Mode](./screenshots/mode.png)
+
+---
+
+### Mobile Chat Interface
+
+![Mobile Chat](./screenshots/mobile.png)
+
+---
+
+### Typing Feature
+
+![Typing Feature](./screenshots/typing.png)
+
+---
+
+### Active Users Sidebar
+
+![Users Sidebar](./screenshots/sidebar.png)
 
 ---
 
@@ -148,15 +169,14 @@ MongoDB Atlas Database
 
 # 🚀 Future Improvements
 
-- 🔐 User authentication
-- 👥 Online users list
-- ✍️ Typing indicators
-- 🔔 Notification sounds
-- 😊 Emoji support
-- 📎 File sharing
-- 🖼️ User avatars
+- 🔐 Authentication & Authorization
+- 👥 Presence / Online status
+- 📎 File & image sharing
+- 🖼️ User profile avatars
 - 💬 Direct messaging
 - 📱 Progressive Web App (PWA)
+- 🔍 Chat search functionality
+- 🌍 Multi-language support
 
 ---
 
@@ -178,9 +198,13 @@ This project helped strengthen concepts in:
 ## Roshan Kodi
 
 - GitHub: https://github.com/roshankodi
+- LinkedIn: https://linkedin.com/in/kodi-roshan-78858b356
+- Portfolio:  https://roshankodi.github.io/portfolio-me/
 
 ---
 
 # ⭐ Support
 
 If you like this project, consider giving it a star on GitHub ⭐
+
+⭐ Star the repository to support development.
